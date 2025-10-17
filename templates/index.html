@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <title>AI文档结构化解析工具</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; width: 100%; overflow: hidden; }
+        body { background-image: url("{{ url_for('static', filename='background.jpg') }}");
+               background-size: cover; background-position: center; background-attachment: fixed; display: flex; }
+        .sidebar-card { width: 280px; flex-shrink: 0; height: 100%; display: flex; align-items: center; justify-content: center;
+                        background-color: rgba(30, 30, 40, 0.55); -webkit-backdrop-filter: blur(15px); backdrop-filter: blur(15px);
+                        border-right: 1px solid rgba(255, 255, 255, 0.1); }
+        .sidebar-content { text-align: center; width: 100%; padding: 2rem; }
+        .sidebar-content img { width: 120px; height: 120px; border-radius: 50%; margin-bottom: 1rem; border: 2px solid var(--primary-focus); }
+        .sidebar-content a[role="button"] { width: 100%; }
+        .main-content-card { flex-grow: 1; height: 100%; display: flex; flex-direction: column; justify-content: center;
+                             padding: 3rem; background-color: rgba(255, 255, 255, 0.05);
+                             -webkit-backdrop-filter: blur(25px); backdrop-filter: blur(25px); }
+        
+        /* --- 加载动画样式 --- */
+        .loader-container {
+            text-align: center;
+        }
+        .loader {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: inline-block;
+            position: relative;
+            border: 5px solid transparent; /* 边框设为透明 */
+            border-top-color: var(--primary); /* 只给顶部边框上色 */
+            animation: spin 1s ease-in-out infinite; /* 应用名为 'spin' 的动画 */
+        }
+        
+        /* 定义 'spin' 动画的关键帧 */
+        @keyframes spin {
+            to { 
+                -webkit-transform: rotate(360deg);
+                transform: rotate(360deg); 
+            }
+        }
+        
+	        .modal {
+            display: none; position: fixed; z-index: 1000; left: 0; top: 0;
+            width: 100%; height: 100%; overflow: auto;
+            background-color: rgba(0,0,0,0.6); -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px);
+        }
+        .modal-content {
+            background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888;
+            width: 80%; max-width: 900px; border-radius: var(--border-radius); position: relative;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .modal-header {
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid var(--pico-muted-border-color); padding-bottom: 1rem; margin-bottom: 1rem;
+        }
+        .modal-close {
+            color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer; line-height: 1;
+        }
+        .modal-close:hover, .modal-close:focus { color: black; text-decoration: none; }
+        .modal-body { max-height: 70vh; overflow-y: auto; }
+        .modal-body table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+        .modal-body th, .modal-body td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        .modal-body th { background-color: #f2f2f2; }
+        .modal-body tr:nth-child(even){ background-color: #f9f9f9; }
+
+
+        @media (max-width: 992px) {
+            body { overflow: auto; display: block; }
+            .sidebar-card { display: none; }
+            .main-content-card { border-radius: var(--border-radius); margin: 1rem; height: calc(100% - 2rem); width: calc(100% - 2rem); }
+        }
+    </style>
+</head>
+<body>
+    <!-- ======================= 侧边栏卡片 ======================= -->
+    <aside class="sidebar-card">
+        <div class="sidebar-content">
+            <!-- 头像: 请确保在 static 文件夹中有名为 avatar.png 的图片 -->
+            <img src="{{ url_for('static', filename='avatar.jpg') }}" alt="头像">
+            
+            <!-- 个人信息 -->
+            <hgroup>
+                <h5 style="color: white;">C cc</h5>
+                <p style="color: lightgray;">A coder.</p>
+            </hgroup>
+            
+            <!-- Github 链接按钮: 请将 your-username 替换为您的GitHub用户名 -->
+            <a href="https://github.com/cccccyccccc" target="_blank" role="button" class="contrast">
+                <!-- GitHub SVG 图标 -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="vertical-align: -0.125em; margin-right: 0.5em;">
+                    <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+                </svg>
+                GitHub 主页
+            </a>
+        </div>
+    </aside>
+
+    <!-- ======================= 右侧主内容卡片 ======================= -->
+    <main class="main-content-card">
+
+        <!-- 1. 上传区域 -->
+        <div id="upload-section">
+            <hgroup>
+                <h1>AI 文档结构化解析</h1>
+                <p>上传图片或PDF文件，自动提取内容并转换为Markdown格式</p>
+            </hgroup>
+            
+            <!-- 文件上传表单 -->
+            <form id="upload-form" method="post" enctype="multipart/form-data">
+                <label for="file">
+                    选择一个文件
+                    <input type="file" id="file" name="file" required>
+                </label>
+                <button type="submit">上传并解析</button>
+            </form>
+            <!-- 用于显示错误的区域 -->
+            <p id="error-message" style="color: var(--pico-color-red-500);"></p>
+        </div>
+
+        <!-- 2. 加载区域 (默认隐藏) -->
+        <div id="loading-section" style="display: none;">
+            <div class="loader-container">
+                <span class="loader"></span> <!-- 使用 span 来创建动画元素 -->
+                <h3 style="margin-top: 2rem;">正在调用AI模型解析...</h3>
+                <p>这可能需要一些时间，请耐心等待。</p>
+            </div>
+        </div>
+
+        <!-- 3. 结果区域 (默认隐藏) -->
+        <div id="result-section" style="display: none; text-align: center;">
+             <div style="font-size: 4rem; color: var(--primary);">✓</div>
+            <hgroup>
+                <h2>文件解析成功！</h2>
+                <p>您的结果已被打包成ZIP文件，可以下载了。</p>
+            </hgroup>
+            <p>
+                文件名: <code id="result-filename"></code>
+            </p>
+            <div class="grid" style="max-width: 480px; margin: auto;">
+                <a href="#" id="preview-button" role="button" class="secondary">预 览</a>
+                <a id="download-link" href="#" role="button" class="primary">下载 (.zip)</a>
+            </div>
+            <footer style="margin-top: 2rem;">
+		 <a href="#" id="reset-button">返回</a>
+            </footer>
+        </div>
+
+        <div id="preview-modal" class="modal">
+            <div class="modal-content">
+            	<div class="modal-header">
+                    <h3>Markdown 预览</h3>
+                    <span id="modal-close-button" class="modal-close">&times;</span>
+                </div>
+            <div id="modal-body" class="modal-body">
+                <!-- Markdown渲染后的HTML将插入这里 -->
+            </div>
+        </div>
+    </div>
+
+    </main>
+
+    <!-- ======================= JavaScript 逻辑 ======================= -->
+    <script>
+        const uploadSection = document.getElementById('upload-section');
+        const loadingSection = document.getElementById('loading-section');
+        const resultSection = document.getElementById('result-section');
+        const uploadForm = document.getElementById('upload-form');
+        const fileInput = document.getElementById('file');
+        const errorMessage = document.getElementById('error-message');
+        const resultFilename = document.getElementById('result-filename');
+        const downloadLink = document.getElementById('download-link');
+        const resetButton = document.getElementById('reset-button');
+	const previewButton = document.getElementById('preview-button');
+        const previewModal = document.getElementById('preview-modal');
+        const modalCloseButton = document.getElementById('modal-close-button');
+        const modalBody = document.getElementById('modal-body');
+	let currentMarkdownContent = '';
+        uploadForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            if (!fileInput.files.length) {
+                errorMessage.textContent = '请先选择一个文件！';
+                return;
+            }
+
+            errorMessage.textContent = '';
+            uploadSection.style.display = 'none';
+            loadingSection.style.display = 'block';
+            resultSection.style.display = 'none';
+
+            const formData = new FormData(uploadForm);
+            try {
+                const response = await fetch('/process', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    resultFilename.textContent = data.zip_filename;
+                    downloadLink.href = data.download_url;
+		    currentMarkdownContent = data.markdown_content;
+                    loadingSection.style.display = 'none';
+                    resultSection.style.display = 'block';
+                } else {
+                    errorMessage.textContent = '解析失败：' + data.message;
+                    loadingSection.style.display = 'none';
+                    uploadSection.style.display = 'block';
+                }
+            } catch (error) {
+                errorMessage.textContent = '发生未知错误：' + error;
+                loadingSection.style.display = 'none';
+                uploadSection.style.display = 'block';
+            }
+        });
+
+        resetButton.addEventListener('click', function(event) {
+            event.preventDefault();
+            fileInput.value = '';
+            resultSection.style.display = 'none';
+            uploadSection.style.display = 'block';
+        });
+
+	previewButton.addEventListener('click', function() {
+            // 使用 marked.js 将保存的Markdown字符串转换为HTML
+            modalBody.innerHTML = marked.parse(currentMarkdownContent);
+            // 显示模态框
+            previewModal.style.display = 'block';
+        });
+
+        // 关闭模态框的事件 (点击 '×' 按钮)
+        modalCloseButton.onclick = function() {
+            previewModal.style.display = "none";
+        }
+
+        // 关闭模态框的事件 (点击模态框外部的遮罩)
+        window.onclick = function(event) {
+            if (event.target == previewModal) {
+                previewModal.style.display = "none";
+            }
+        }
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,22 @@
+# 忽略由Python生成的缓存文件
+__pycache__/
+*.pyc
+
+# 忽略IDE/编辑器配置文件
+.vscode/
+.idea/
+
+# 忽略所有由应用生成的上传和输出文件夹
+uploads/
+outputs/
+structured_output/
+pdf_output/
+
+# 忽略Conda/Python虚拟环境文件夹 (如果存在于项目目录中)
+.env/
+venv/
+env/
+
+# 忽略操作系统生成的文件
+.DS_Store
+Thumbs.db

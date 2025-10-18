@@ -6,22 +6,39 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <title>AI文档结构化解析工具</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='katex/katex.min.css') }}">
+    <script defer src="{{ url_for('static', filename='katex/katex.min.js') }}"></script>
+    <script defer src="{{ url_for('static', filename='katex/contrib/auto-render.min.js') }}"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { height: 100%; width: 100%; overflow: hidden; }
-        body { background-image: url("{{ url_for('static', filename='background.jpg') }}");
-               background-size: cover; background-position: center; background-attachment: fixed; display: flex; }
+       * { margin: 0; padding: 0; box-sizing: border-box; }
+        html {height: 100%; overflow: hidden;}
+        body { 
+            height: 100%; 
+            width: 100%; 
+            background-image: url("{{ url_for('static', filename='background.jpg') }}");
+            background-size: cover; 
+            background-position: center; 
+            background-attachment: fixed; 
+            display: flex; 
+            overflow: auto;
+        }
         .sidebar-card { width: 280px; flex-shrink: 0; height: 100%; display: flex; align-items: center; justify-content: center;
                         background-color: rgba(30, 30, 40, 0.55); -webkit-backdrop-filter: blur(15px); backdrop-filter: blur(15px);
                         border-right: 1px solid rgba(255, 255, 255, 0.1); }
         .sidebar-content { text-align: center; width: 100%; padding: 2rem; }
         .sidebar-content img { width: 120px; height: 120px; border-radius: 50%; margin-bottom: 1rem; border: 2px solid var(--primary-focus); }
         .sidebar-content a[role="button"] { width: 100%; }
-        .main-content-card { flex-grow: 1; height: 100%; display: flex; flex-direction: column; justify-content: center;
-                             padding: 3rem; background-color: rgba(255, 255, 255, 0.05);
-                             -webkit-backdrop-filter: blur(25px); backdrop-filter: blur(25px); }
-        
-        /* --- 加载动画样式 --- */
+        .main-content-card { 
+		flex-grow: 1; 
+		height: 100%; 
+		display: flex; 
+		flex-direction: column;
+		justify-content: center;
+                padding: 3rem; 
+		background-color: rgba(255, 255, 255, 0.05);
+                -webkit-backdrop-filter: blur(25px); 
+		backdrop-filter: blur(25px); 
+	}
         .loader-container {
             text-align: center;
         }
@@ -31,12 +48,11 @@
             border-radius: 50%;
             display: inline-block;
             position: relative;
-            border: 5px solid transparent; /* 边框设为透明 */
-            border-top-color: var(--primary); /* 只给顶部边框上色 */
-            animation: spin 1s ease-in-out infinite; /* 应用名为 'spin' 的动画 */
+            border: 5px solid transparent; 
+            border-top-color: var(--primary); 
+            animation: spin 1s ease-in-out infinite; 
         }
         
-        /* 定义 'spin' 动画的关键帧 */
         @keyframes spin {
             to { 
                 -webkit-transform: rotate(360deg);
@@ -44,52 +60,214 @@
             }
         }
         
-	        .modal {
+        body.modal-open {
+            overflow: hidden !important;
+        }
+
+	   .modal {
             display: none; position: fixed; z-index: 1000; left: 0; top: 0;
             width: 100%; height: 100%; overflow: auto;
-            background-color: rgba(0,0,0,0.6); -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px);
+            overflow: hidden; 
+            background-color: rgba(0,0,0,0.3); 
+            -webkit-backdrop-filter: blur(5px); 
+            backdrop-filter: blur(5px);
         }
         .modal-content {
-            background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888;
-            width: 80%; max-width: 900px; border-radius: var(--border-radius); position: relative;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            color: #EAE6F0;
+            background-image: linear-gradient(
+                135deg,
+                rgba(244, 194, 194, 0.4),
+                rgba(192, 168, 216, 0.5)
+            );
+            -webkit-backdrop-filter: blur(30px);
+            backdrop-filter: blur(30px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            position: relative;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px;
+            width: 85%; /* 稍微加宽一点以容纳代码 */
+            max-width: 950px; /* 增加最大宽度 */
+            border-radius: var(--border-radius);
+
+            /* --- 新增的核心样式 --- */
+            height: 85vh; /* 设置一个固定的高度，为视口高度的85% */
+            max-height: 800px; /* 同时设置一个最大像素高度，防止在超大屏幕上过高 */
+            display: flex; /* 启用 Flexbox 布局 */
+            flex-direction: column; /* 设置为垂直方向布局 */
+        }
+        .modal-content * {
+            color: inherit; 
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
         }
         .modal-header {
-            display: flex; justify-content: space-between; align-items: center;
-            border-bottom: 1px solid var(--pico-muted-border-color); padding-bottom: 1rem; margin-bottom: 1rem;
+            color: inherit;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding-bottom: 0.75rem !important;
+            margin-bottom: 0.75rem !important;
+        }
+        .modal-header h3 {
+            margin: 0 !important; 
+            font-size: 1.15rem !important;
         }
         .modal-close {
-            color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer; line-height: 1;
+            color: #ccc; font-size: 28px; font-weight: bold; 
+            cursor: pointer; line-height: 1;
+            transition: color 0.3s ease;
         }
-        .modal-close:hover, .modal-close:focus { color: black; text-decoration: none; }
-        .modal-body { max-height: 70vh; overflow-y: auto; }
+        .modal-close:hover, 
+        .modal-close:focus { 
+            color: #EAE6F0; 
+            text-decoration: none; 
+        }
+        .modal-body .katex-display, 
+        .modal-body pre,           
+        .modal-body table          
+        {
+            max-width: 100%;     
+            overflow-x: auto;   
+            -webkit-overflow-scrolling: touch; 
+        }
+        .modal-body .katex-display {
+            padding-bottom: 0.5em; 
+        }
+        .modal-body {
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+            overflow-y: auto; /* 保持内容超出时可以滚动 */
+            
+            /* --- 新增/修改的核心样式 --- */
+            flex-grow: 1;  /* 让它占据所有可用的垂直空间 */
+            min-height: 0; /* 这是一个重要的Flexbox修复，确保在内容过多时可以正确地收缩和滚动 */
+        }
         .modal-body table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
-        .modal-body th, .modal-body td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        .modal-body th { background-color: #f2f2f2; }
-        .modal-body tr:nth-child(even){ background-color: #f9f9f9; }
+        .modal-body th, .modal-body td { border: 1px solid rgba(255, 255, 255, 0.15); padding: 8px; text-align: left; }
+        .modal-body th { background-color: rgba(255, 255, 255, 0.1); }
+        .modal-body tr:nth-child(even){ background-color: rgba(255, 255, 255, 0.05); }
+        .modal-body::-webkit-scrollbar,
+        .modal-body .katex-display::-webkit-scrollbar,
+        .modal-body pre::-webkit-scrollbar,
+        .modal-body table::-webkit-scrollbar {
+            width: 8px; 
+            height: 8px; 
+        }
+        .modal-body::-webkit-scrollbar-track,
+        .modal-body .katex-display::-webkit-scrollbar-track,
+        .modal-body pre::-webkit-scrollbar-track,
+        .modal-body table::-webkit-scrollbar-track {
+            background: transparent; 
+        }
 
+        /* 滚动条的滑块 (那个可以拖动的部分) */
+        .modal-body::-webkit-scrollbar-thumb,
+        .modal-body .katex-display::-webkit-scrollbar-thumb,
+        .modal-body pre::-webkit-scrollbar-thumb,
+        .modal-body table::-webkit-scrollbar-thumb {
+            background-color: transparent; /* 默认状态下，滑块也是透明的，实现“隐藏”效果 */
+            border-radius: 10px; /* 圆角 */
+            border: 2px solid transparent; /* 保持一个透明边框的占位 */
+            background-clip: content-box;
+        }
 
-        @media (max-width: 992px) {
-            body { overflow: auto; display: block; }
-            .sidebar-card { display: none; }
-            .main-content-card { border-radius: var(--border-radius); margin: 1rem; height: calc(100% - 2rem); width: calc(100% - 2rem); }
+        /* 关键：当鼠标悬停在可滚动区域上时，才让滑块显示出来 */
+        .modal-body:hover::-webkit-scrollbar-thumb,
+        .modal-body .katex-display:hover::-webkit-scrollbar-thumb,
+        .modal-body pre:hover::-webkit-scrollbar-thumb,
+        .modal-body table:hover::-webkit-scrollbar-thumb {
+            background-color: rgba(255, 255, 255, 0.3); /* 显示为一个半透明的白色滑块，完美融入玻璃风格 */
+        }
+        
+        /* 当鼠标悬停在滑块上时，让它更明显一点 */
+        .modal-body::-webkit-scrollbar-thumb:hover,
+        .modal-body .katex-display::-webkit-scrollbar-thumb:hover,
+        .modal-body pre::-webkit-scrollbar-thumb:hover,
+        .modal-body table::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(255, 255, 255, 0.5);
+        }
+
+        /* --- 针对 Firefox 浏览器 --- */
+        .modal-body,
+        .modal-body .katex-display,
+        .modal-body pre,
+        .modal-body table {
+            scrollbar-width: thin; /* 让滚动条变细 */
+            scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+        }
+
+        .modal-tabs {
+            display: flex;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            margin-bottom: 1rem !important;
+            position: relative;
+        }
+
+        /* 单个标签按钮 */
+        .tab-link {
+            background: none;
+            border: none;
+            padding: 0.6rem 1.25rem !important;
+            cursor: pointer;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.95rem !important; 
+            position: relative;
+            transition: color 0.3s ease;
+        }
+
+        .tab-link:hover {
+            color: white; /* 悬停时颜色变亮 */
+        }
+        
+        /* 激活状态的标签按钮 */
+        .tab-link.active {
+            color: white; /* 选中时为纯白色 */
+            font-weight: 600;
+        }
+
+        /* 激活状态的下划线指示器 */
+        .tab-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px; /* 紧贴在父容器的下边框上 */
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: var(--pico-primary, #EAE6F0); /* 使用 Pico 的主色或我们的柔和白色 */
+        }
+
+        /* 标签内容面板 */
+        .tab-content {
+            display: none; /* 默认所有内容都隐藏 */
+        }
+        
+        .tab-content.active {
+            display: block; /* 只有激活的面板才显示 */
+        }
+
+        /* 原文面板的样式 (与之前类似，但现在是完整高度) */
+        #raw-markdown-view pre {
+            background-color: rgba(0, 0, 0, 0.15);
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            font-family: inherit;
+            white-space: pre-wrap;
+            word-break: break-all;
+            height: 100%; /* 让 pre 元素完全填充父容器 */
+            overflow: auto; /* 保留自身的滚动能力，以应对可能的横向溢出 */
         }
     </style>
 </head>
 <body>
-    <!-- ======================= 侧边栏卡片 ======================= -->
     <aside class="sidebar-card">
         <div class="sidebar-content">
-            <!-- 头像: 请确保在 static 文件夹中有名为 avatar.png 的图片 -->
             <img src="{{ url_for('static', filename='avatar.jpg') }}" alt="头像">
-            
-            <!-- 个人信息 -->
             <hgroup>
                 <h5 style="color: white;">C cc</h5>
                 <p style="color: lightgray;">A coder.</p>
             </hgroup>
-            
-            <!-- Github 链接按钮: 请将 your-username 替换为您的GitHub用户名 -->
             <a href="https://github.com/cccccyccccc" target="_blank" role="button" class="contrast">
                 <!-- GitHub SVG 图标 -->
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="vertical-align: -0.125em; margin-right: 0.5em;">
@@ -143,25 +321,34 @@
             </p>
             <div class="grid" style="max-width: 480px; margin: auto;">
                 <a href="#" id="preview-button" role="button" class="secondary">预 览</a>
-                <a id="download-link" href="#" role="button" class="primary">下载 (.zip)</a>
+                <a id="download-link" href="#" role="button" class="primary">下 载 (.zip)</a>
             </div>
             <footer style="margin-top: 2rem;">
 		 <a href="#" id="reset-button">返回</a>
             </footer>
         </div>
 
+
         <div id="preview-modal" class="modal">
             <div class="modal-content">
-            	<div class="modal-header">
-                    <h3>Markdown 预览</h3>
+                <div class="modal-header">
+                    <h3>内容预览</h3> 
                     <span id="modal-close-button" class="modal-close">&times;</span>
                 </div>
-            <div id="modal-body" class="modal-body">
-                <!-- Markdown渲染后的HTML将插入这里 -->
+                <div class="modal-tabs">
+                    <button class="tab-link active" data-tab="rendered-view">渲染效果</button>
+                    <button class="tab-link" data-tab="raw-markdown-view">Markdown 原文</button>
+                </div>
+                <div id="modal-body" class="modal-body">
+                    <div id="rendered-view" class="tab-content active">
+                    </div>
+                    <div id="raw-markdown-view" class="tab-content">
+                        <pre><code><!-- 原始 Markdown 文本将插入这里 --></code></pre>
+                    </div>
+                    
+                </div>
             </div>
         </div>
-    </div>
-
     </main>
 
     <!-- ======================= JavaScript 逻辑 ======================= -->
@@ -179,7 +366,27 @@
         const previewModal = document.getElementById('preview-modal');
         const modalCloseButton = document.getElementById('modal-close-button');
         const modalBody = document.getElementById('modal-body');
-	let currentMarkdownContent = '';
+	    let currentMarkdownContent = '';
+        const renderer = new marked.Renderer();
+        const originalCodeRenderer = renderer.code;
+
+        renderer.code = function(code, language) {
+            if (language === 'math') {
+                return `<p>$$${code}$$</p>`;
+            }
+            return originalCodeRenderer.call(this, code, language);
+        };
+
+         marked.setOptions({
+            renderer: renderer,
+            gfm: true,
+            breaks: false,
+            pedantic: false,
+            sanitize: false,
+            smartLists: true,
+            smartypants: false
+        });
+
         uploadForm.addEventListener('submit', async function(event) {
             event.preventDefault();
 
@@ -204,7 +411,7 @@
                 if (data.success) {
                     resultFilename.textContent = data.zip_filename;
                     downloadLink.href = data.download_url;
-		    currentMarkdownContent = data.markdown_content;
+		            currentMarkdownContent = data.markdown_content;
                     loadingSection.style.display = 'none';
                     resultSection.style.display = 'block';
                 } else {
@@ -226,21 +433,57 @@
             uploadSection.style.display = 'block';
         });
 
-	previewButton.addEventListener('click', function() {
-            // 使用 marked.js 将保存的Markdown字符串转换为HTML
-            modalBody.innerHTML = marked.parse(currentMarkdownContent);
-            // 显示模态框
+	    previewButton.addEventListener('click', function() {
+            const renderedView = document.getElementById('rendered-view');
+            const rawMarkdownCodeElement = document.querySelector('#raw-markdown-view code');
+            const latexFormulas = [];
+            const protectFormula = (match) => {
+                latexFormulas.push(match);
+                return `<!--LATEX_PLACEHOLDER_${latexFormulas.length - 1}-->`;
+            };
+            let sanitizedContent = currentMarkdownContent.replace(/\$\$([\s\S]*?)\$\$/g, protectFormula);
+            sanitizedContent = sanitizedContent.replace(/\$([\s\S]*?)\$/g, protectFormula);
+            let html = marked.parse(sanitizedContent);
+            html = html.replace(/<!--LATEX_PLACEHOLDER_(\d+)-->/g, (match, index) => {
+                return latexFormulas[parseInt(index, 10)];
+            });
+            renderedView.innerHTML = html;
+            rawMarkdownCodeElement.textContent = currentMarkdownContent;
+            // modalBody.innerHTML = html;
+            renderMathInElement(renderedView, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false},
+                    {left: '\\(', right: '\\)', display: false},
+                    {left: '\\[', right: '\\]', display: true}
+                ],
+                throwOnError: false
+            });
+            document.body.classList.add('modal-open');
             previewModal.style.display = 'block';
         });
 
-        // 关闭模态框的事件 (点击 '×' 按钮)
+        const tabLinks = document.querySelectorAll('.tab-link');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                tabLinks.forEach(item => item.classList.remove('active'));
+                tabContents.forEach(item => item.classList.remove('active'));
+                const tabId = link.getAttribute('data-tab');
+                const activeContent = document.getElementById(tabId);
+                link.classList.add('active');
+                activeContent.classList.add('active');
+            });
+        });
+
         modalCloseButton.onclick = function() {
+            document.body.classList.remove('modal-open');
             previewModal.style.display = "none";
         }
-
-        // 关闭模态框的事件 (点击模态框外部的遮罩)
         window.onclick = function(event) {
             if (event.target == previewModal) {
+                document.body.classList.remove('modal-open');
                 previewModal.style.display = "none";
             }
         }

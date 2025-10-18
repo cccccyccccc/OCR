@@ -3,8 +3,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/pico.min.css') }}">
+    <script src="{{ url_for('static', filename='js/marked.min.js') }}"></script>
     <title>AI文档结构化解析工具</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='katex/katex.min.css') }}">
     <script defer src="{{ url_for('static', filename='katex/katex.min.js') }}"></script>
